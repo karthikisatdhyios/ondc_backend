@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dhiyos — Agentic Payment Settlement: Options & Challenges</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a2233; font-size: 11px; line-height: 1.5; margin: 0;
+  }
+  h1 { font-size: 21px; margin: 0 0 2px; color: #0f172a; }
+  .sub { color: #64748b; font-size: 11px; margin: 0 0 16px; }
+  h2 {
+    font-size: 13px; margin: 20px 0 8px; color: #0f172a;
+    border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;
+  }
+  h3 { font-size: 11.5px; margin: 12px 0 4px; color: #1e293b; }
+  p { margin: 6px 0; }
+  .lead { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
+  .pill { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
+  .ok { background: #ecfdf3; color: #027a48; }
+  .warn { background: #fffaeb; color: #b54708; }
+  .bad { background: #fef3f2; color: #b42318; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 8px; border: 1px solid #e2e8f0; }
+  th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: #475569; }
+  td { font-size: 10.5px; }
+  ul { margin: 5px 0; padding-left: 16px; }
+  li { margin: 2px 0; }
+  .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin: 8px 0; page-break-inside: avoid; }
+  .card .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .card .name { font-weight: 700; font-size: 12px; color: #0f172a; }
+  .muted { color: #64748b; }
+  .rec { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; }
+  .foot { margin-top: 18px; color: #94a3b8; font-size: 9px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  code { background: #f1f5f9; padding: 1px 4px; border-radius: 4px; font-size: 10px; }
+</style>
+</head>
+<body>
+
+  <h1>Agentic Payment Settlement — Options &amp; Challenges</h1>
+  <p class="sub">Dhiyos · prepared for founder discussion · June 2026</p>
+
+  <div class="lead">
+    <strong>Goal.</strong> When the agent books a cart, the platform should pay <em>each merchant</em> the
+    exact amount shown on screen, automatically (off-session), after a one-time user authorization — with the
+    <strong>AP2 protocol</strong> providing signed proof of intent, cart and payment. The blocker is not AP2 (already
+    built and working); it is the <strong>money-movement rail</strong> available to an India-registered platform.
+  </div>
+
+  <h2>The problem has two halves</h2>
+  <table>
+    <tr>
+      <th style="width:50%">A · User → Agent (auto-deduction)</th>
+      <th style="width:50%">B · Platform → Merchant (settlement)</th>
+    </tr>
+    <tr>
+      <td>Let the user authorize once, then allow the agent to pay on their behalf later, without the user present.</td>
+      <td>Route each merchant's exact share into <em>their own</em> bank account — not the platform's.</td>
+    </tr>
+  </table>
+  <p class="muted">Most rails solve only one half well. A production system combines an auto-deduction rail (A) with a split-settlement rail (B).</p>
+
+  <h2>Where we are today (built &amp; tested)</h2>
+  <div class="card">
+    <div class="head"><span class="name">AP2 + Stripe (per-merchant charges)</span><span class="pill ok">Working in test</span></div>
+    <ul>
+      <li>One-time card authorization via Stripe <code>SetupIntent</code> (off-session) — the AP2 Payment Mandate.</li>
+      <li>On booking: real, signed AP2 mandates (Intent → per-merchant Cart → Payment) + one off-session Stripe charge <em>per merchant</em> for the exact amount, each verifiable (we confirmed live charges + receipts).</li>
+      <li><strong>Limitation:</strong> all funds land in <em>our</em> Stripe balance. Merchants are attributed via metadata + a settlement ledger + signed receipt, but money is <strong>not</strong> deposited into each merchant's bank.</li>
+    </ul>
+  </div>
+
+  <h2>Options for true settlement (Half B)</h2>
+
+  <div class="card">
+    <div class="head"><span class="name">1 · Stripe Connect</span><span class="pill bad">Blocked for India</span></div>
+    <p>The "correct" Stripe answer: connected account per merchant + destination charges, each merchant paid directly.</p>
+    <p class="muted"><strong>Challenge:</strong> India-registered platforms cannot onboard as Stripe Connect platforms (regulatory/identity verification). Not viable for us.</p>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="name">2 · Per-merchant charges + ledger (current)</span><span class="pill warn">Demo-grade</span></div>
+    <p>Keep Stripe, charge each merchant's exact amount to our account, track attribution in a ledger + AP2 receipt.</p>
+    <p class="muted"><strong>Challenge:</strong> money never reaches the merchants' banks — fine for a prototype, not for real operations. Currency is USD in test (₹ amounts mirror the numbers).</p>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="name">3 · Razorpay Route / Cashfree Easy Split</span><span class="pill ok">India-native split</span></div>
+    <p>India marketplace rails: one customer payment is split and <strong>settled directly to each merchant's bank/UPI</strong>; platform deducts commission. Route's "Linked Accounts" map almost 1:1 onto our per-merchant step.</p>
+    <p class="muted"><strong>Challenges:</strong> each merchant must be a real, <strong>KYC'd</strong> entity with a bank account (real onboarding); INR-only; requires business verification / sales enablement (not instant self-serve); only the payment-execution step changes — AP2 layer stays.</p>
+  </div>
+
+  <h2>Options for auto-deduction (Half A)</h2>
+
+  <div class="two">
+    <div class="card">
+      <div class="head"><span class="name">Card / UPI e-mandate</span><span class="pill warn">Capped + delayed</span></div>
+      <ul>
+        <li>User authorizes once (OTP/3DS); agent debits later up to a cap.</li>
+        <li><strong>Challenges:</strong> per-txn OTP above ~₹15,000; <strong>24-hour pre-debit notification</strong> required by RBI before each auto-debit → <em>breaks instant checkout</em>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="head"><span class="name">PPI wallet (Razorpay Engage)</span><span class="pill ok">Instant off-session</span></div>
+      <ul>
+        <li>User pre-funds a wallet once; agent spends from <strong>balance</strong> instantly — no per-txn OTP, no 24h notice.</li>
+        <li><strong>Challenges:</strong> see licensing below; KYC limits (min-KYC ≈ ₹10k, full-KYC ≤ ₹2,00,000).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>PPI wallet — the licensing fork</h2>
+  <table>
+    <tr><th>Wallet type</th><th>Can pay…</th><th>RBI license?</th></tr>
+    <tr><td><strong>Closed</strong></td><td>only Dhiyos (we are merchant-of-record)</td><td><span class="pill ok">None needed</span></td></tr>
+    <tr><td><strong>Semi-closed</strong></td><td>multiple third-party merchants</td><td><span class="pill bad">Full PPI license</span> (India co., ₹15–25 cr net worth, RBI authorization, audits)</td></tr>
+    <tr><td><strong>Partner / BaaS</strong></td><td>third-party merchants, on a licensed issuer's licence</td><td><span class="pill warn">No licence for us</span> — ride partner (e.g. Razorpay Engage)</td></tr>
+  </table>
+  <p class="muted">A marketplace paying external merchants is <strong>semi-closed</strong> → needs a licence or a licensed partner. A closed wallet only works if Dhiyos is the seller-of-record. PPI solves Half&nbsp;A beautifully but the merchant payout (Half&nbsp;B) still needs Route / Easy Split.</p>
+
+  <h2>Recommendation</h2>
+  <div class="rec">
+    <p style="margin-top:0"><strong>Prototype (now, no licence):</strong> keep AP2 + a <em>closed-loop wallet</em> (internal balance ledger funded via a Razorpay payment, debited instantly by the agent). Demonstrates the full instant agentic-checkout experience legally.</p>
+    <p><strong>Production:</strong> <strong>Razorpay Route</strong> for real split settlement to merchant banks (smallest change from our current per-merchant step) + an auto-deduction rail — UPI Autopay / e-mandate for standing orders, or a <strong>BaaS PPI wallet</strong> (Razorpay Engage) for instant agent spend. AP2 stays unchanged across all of these; only the execution step swaps.</p>
+    <p style="margin-bottom:0"><strong>Open decisions for founder:</strong> (1) Are we merchant-of-record or a true marketplace? (2) Appetite for KYC onboarding of merchants? (3) Instant agent checkout (needs wallet) vs scheduled orders (e-mandate is fine)?</p>
+  </div>
+
+  <p class="foot">Limits and RBI rules change periodically — verify current caps and licensing thresholds before committing. Prepared as a discussion aid, not legal/financial advice.</p>
+
+</body>
+</html>

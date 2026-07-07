@@ -1,0 +1,132 @@
+.receipt {
+  align-self: flex-start;
+  max-width: 460px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--border, #e4e7ec);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+
+.receipt__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.receipt__title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #101828;
+}
+
+.receipt__total {
+  font-weight: 700;
+  font-size: 16px;
+  color: #101828;
+}
+
+.receipt__order {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted, #667085);
+  word-break: break-all;
+}
+
+.receipt__merchants {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.receipt__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.receipt__link {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.receipt__link:hover {
+  text-decoration: underline;
+}
+
+.receipt__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.receipt__merchant {
+  color: #101828;
+}
+
+.receipt__amount {
+  font-variant-numeric: tabular-nums;
+  color: #101828;
+}
+
+.receipt__status {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.receipt__status--ok {
+  color: #027a48;
+  background: #ecfdf3;
+}
+
+.receipt__status--fail {
+  color: #b42318;
+  background: #fef3f2;
+}
+
+.receipt__status--pending {
+  color: #b54708;
+  background: #fffaeb;
+}
+
+.receipt__network {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #e4e7ec);
+}
+
+.receipt__network-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.receipt__network-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted, #667085);
+  word-break: break-all;
+}
+
+.receipt__ap2 {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--muted, #667085);
+  line-height: 1.4;
+}

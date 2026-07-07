@@ -23,12 +23,17 @@ const apiKey = process.env.OPENAI_API_KEY;
 const model = process.env.OPENAI_MODEL;
 const port = process.env.PORT || 8787;
 
-if (!apiKey) {
-  console.error("Missing OPENAI_API_KEY. Add it to the .env file.");
-  process.exit(1);
+// OpenAI powers only the chat/recipe/recommendation features. The ONDC BAP
+// endpoints don't use it, so a key-less deploy (e.g. a pure ONDC gateway) is
+// allowed to boot — chat endpoints just return a clear error until a key is set.
+const openaiConfigured = Boolean(apiKey);
+if (!openaiConfigured) {
+  console.warn(
+    "OPENAI_API_KEY not set — chat/recipe features are disabled; ONDC BAP endpoints still run."
+  );
 }
 
-const client = new OpenAI({ apiKey });
+const client = openaiConfigured ? new OpenAI({ apiKey }) : null;
 const db = getDb();
 const app = express();
 // Keep the raw body so inbound Beckn callbacks can be signature-verified.
@@ -166,6 +171,9 @@ Product: ${JSON.stringify(summary)}`;
 }
 
 app.post("/api/chat", async (req, res) => {
+  if (!openaiConfigured) {
+    return res.status(503).json({ error: "Chat is unavailable: OPENAI_API_KEY is not configured on this server." });
+  }
   const { messages } = req.body;
   if (!Array.isArray(messages)) {
     return res.status(400).json({ error: "messages must be an array" });
@@ -190,6 +198,9 @@ app.post("/api/discount", (req, res) => {
 // Orchestrates: interpret -> fetch products from DB -> price each via the
 // discount tool -> return product cards (with ratings + applied card).
 app.post("/api/ask", async (req, res) => {
+  if (!openaiConfigured) {
+    return res.status(503).json({ error: "Assistant is unavailable: OPENAI_API_KEY is not configured on this server." });
+  }
   const { messages, userCards = [], cart = [] } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "messages must be a non-empty array" });

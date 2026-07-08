@@ -16,6 +16,7 @@ import { beckn } from "./beckn/config.js";
 import { discover } from "./beckn/discovery.js";
 import { becknBapRouter, ondcOnboardingRouter } from "./beckn/routes.js";
 import { mockBppRouter } from "./beckn/mock-bpp/index.js";
+import { getKeys } from "./beckn/keys.js";
 
 dotenv.config();
 
@@ -55,6 +56,32 @@ if (!beckn.enabled) {
 console.log(
   `Beckn: ${beckn.enabled ? `LIVE (${beckn.env}) domain ${beckn.domain}` : "DEV (local mock BPP)"}`
 );
+
+// Non-sensitive diagnostics: confirms which env config a deployment actually
+// picked up (public identity + booleans only — never returns private keys).
+app.get("/beckn/health", async (_req, res) => {
+  let signingKeyLoaded = false;
+  let encKeyLoaded = false;
+  try {
+    const k = await getKeys();
+    signingKeyLoaded = Boolean(k?.signing?.publicKey);
+    encKeyLoaded = Boolean(k?.encryption?.privateKey);
+  } catch {
+    // keys not available
+  }
+  res.json({
+    bapId: beckn.bapId,
+    bapUri: beckn.bapUri,
+    domain: beckn.domain,
+    env: beckn.env,
+    becknEnabled: beckn.enabled,
+    uniqueKeyId: beckn.uniqueKeyId,
+    signingKeyLoaded,
+    encKeyLoaded,
+    ondcEncryptionKeySet: Boolean(process.env.ONDC_ENCRYPTION_PUBLIC_KEY),
+    openaiConfigured,
+  });
+});
 
 // Ask GPT to route a message: book the cart, gather recipe ingredients,
 // find a single product, or just chat?

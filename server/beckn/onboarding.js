@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { getKeys, sodiumReady } from "./keys.js";
 import { beckn } from "./config.js";
-import { buildSubscribePayload } from "./registry.js";
+import { buildSubscribePayload, rawX25519ToDerB64 } from "./registry.js";
 import { createAuthorizationHeader } from "./auth.js";
 
 // ONDC onboarding helper CLI.
@@ -19,12 +19,14 @@ const SITE_FILE = path.join(__dirname, "ondc-site-verification.html");
 
 async function showKeys() {
   const keys = await getKeys();
-  console.log("subscriber_id     :", beckn.bapId);
-  console.log("unique_key_id     :", beckn.uniqueKeyId);
-  console.log("signing_public_key:", keys.signing.publicKey);
-  console.log("encr_public_key   :", keys.encryption.publicKey);
-  console.log("subscriber_url    :", beckn.bapUri);
-  console.log("callback_url      :", "/beckn/bap");
+  console.log("subscriber_id      :", beckn.bapId);
+  console.log("unique_key_id      :", beckn.uniqueKeyId);
+  console.log("signing_public_key :", keys.signing.publicKey);
+  // ONDC expects the encryption key in ASN.1 DER/SPKI base64 form.
+  console.log("encryption_public_key (DER, give this to ONDC):", rawX25519ToDerB64(keys.encryption.publicKey));
+  console.log("encryption_public_key (raw, internal only)   :", keys.encryption.publicKey);
+  console.log("subscriber_url     :", beckn.bapUri);
+  console.log("callback_url       :", "/beckn/bap");
 }
 
 async function writeSiteVerification(requestId) {

@@ -31,14 +31,29 @@ export async function lookupSigningKey(subscriberId, uniqueKeyId) {
 const X25519_SPKI_PREFIX = Buffer.from("302a300506032b656e032100", "hex");
 const X25519_PKCS8_PREFIX = Buffer.from("302e020100300506032b656e04220420", "hex");
 
-function x25519PublicFromRaw(rawB64) {
-  const der = Buffer.concat([X25519_SPKI_PREFIX, Buffer.from(rawB64, "base64")]);
-  return crypto.createPublicKey({ key: der, format: "der", type: "spki" });
+// Accepts an X25519 public key either as a raw 32-byte base64 (our libsodium
+// format) or as an ASN.1 DER/SPKI base64 (the "MCowBQYDK2Vu..." form ONDC
+// publishes). Returns a Node KeyObject.
+function x25519PublicFromB64(b64) {
+  const buf = Buffer.from(b64, "base64");
+  if (buf.length === 32) {
+    const der = Buffer.concat([X25519_SPKI_PREFIX, buf]);
+    return crypto.createPublicKey({ key: der, format: "der", type: "spki" });
+  }
+  return crypto.createPublicKey({ key: buf, format: "der", type: "spki" });
 }
 
 function x25519PrivateFromRaw(rawB64) {
   const der = Buffer.concat([X25519_PKCS8_PREFIX, Buffer.from(rawB64, "base64")]);
   return crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+}
+
+// Convert our raw 32-byte X25519 public key to the ASN.1 DER/SPKI base64 form
+// that ONDC's registry expects in the subscribe payload / portal.
+export function rawX25519ToDerB64(rawB64) {
+  const raw = Buffer.from(rawB64, "base64");
+  if (raw.length !== 32) return rawB64; // already DER (or unexpected) — pass through
+  return Buffer.concat([X25519_SPKI_PREFIX, raw]).toString("base64");
 }
 
 // ---- /on_subscribe challenge decryption ----
@@ -54,7 +69,7 @@ export async function decryptChallenge(challengeB64) {
   const keys = await getKeys();
 
   const privateKey = x25519PrivateFromRaw(keys.encryption.privateKey);
-  const publicKey = x25519PublicFromRaw(ondcPublicKey);
+  const publicKey = x25519PublicFromB64(ondcPublicKey);
   const sharedSecret = crypto.diffieHellman({ privateKey, publicKey });
 
   const decipher = crypto.createDecipheriv("aes-256-ecb", sharedSecret, null);
@@ -91,7 +106,7 @@ export async function buildSubscribePayload({ opsNo = 1, requestId } = {}) {
         callback_url: "/beckn/bap",
         key_pair: {
           signing_public_key: keys.signing.publicKey,
-          encryption_public_key: keys.encryption.publicKey,
+          encryption_public_key: rawX25519ToDerB64(keys.encryption.publicKey),
           valid_from: now.toISOString(),
           valid_until: validUntil.toISOString(),
         },

@@ -1,5 +1,8 @@
 # Deploying the Dhiyos BAP for ONDC (bap.dhiyos.com)
 
+> NOTE: We chose **AWS EC2** as the host — see `docs/deploy-aws-ec2.md`. This Render
+> guide is kept for reference only.
+
 Goal: put the backend online at `https://bap.dhiyos.com` (your ONDC `subscriber_id`)
 with valid SSL, without touching your live `www.dhiyos.com` site or moving your
 GoDaddy nameservers. Target host: **Render** (no Docker, free SSL, custom domains).

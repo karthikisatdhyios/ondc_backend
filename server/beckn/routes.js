@@ -5,6 +5,7 @@ import { beckn } from "./config.js";
 import { ingest } from "./store.js";
 import { parseAuthorizationHeader, verifyAuthorization } from "./auth.js";
 import { lookupSigningKey, decryptChallenge } from "./registry.js";
+import { getKeys, sodiumReady } from "./keys.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -68,8 +69,30 @@ export function ondcOnboardingRouter() {
     }
   });
 
-  // Static domain-verification file (content written by the onboarding CLI).
-  router.get("/ondc-site-verification.html", (_req, res) => {
+  // Domain-verification page. On cloud hosts the filesystem is ephemeral, so we
+  // generate it on demand from ONDC_REQUEST_ID (the request_id ONDC issues during
+  // subscribe) by signing it with our signing key. Falls back to a static file
+  // (written by the onboarding CLI) for local use.
+  router.get("/ondc-site-verification.html", async (req, res) => {
+    const requestId = process.env.ONDC_REQUEST_ID;
+    if (requestId) {
+      try {
+        const sodium = await sodiumReady();
+        const keys = await getKeys();
+        const priv = sodium.from_base64(keys.signing.privateKey, sodium.base64_variants.ORIGINAL);
+        const signed = sodium.to_base64(
+          sodium.crypto_sign_detached(sodium.from_string(requestId), priv),
+          sodium.base64_variants.ORIGINAL
+        );
+        return res
+          .type("html")
+          .send(
+            `<html><head><meta name='ondc-site-verification' content='${signed}' /></head><body>ONDC Site Verification Page</body></html>`
+          );
+      } catch (err) {
+        return res.status(500).send(`site verification error: ${err.message}`);
+      }
+    }
     res.sendFile(path.join(__dirname, "ondc-site-verification.html"), (err) => {
       if (err) res.status(404).send("site verification file not generated yet");
     });

@@ -18,18 +18,27 @@ const NACK = (msg) => ({
 // Verify the inbound Beckn signature in live mode. Skipped in dev (mock BPP is
 // unsigned and same-origin), so the loopback works without a registry.
 async function verified(req) {
-  if (!beckn.enabled) return true;
+  if (!beckn.enabled || beckn.skipInboundVerify) return true;
   try {
     const parsed = parseAuthorizationHeader(req.headers["authorization"]);
-    if (!parsed) return false;
+    if (!parsed) {
+      console.warn("[beckn] inbound verify failed: missing Authorization header");
+      return false;
+    }
     const pub = await lookupSigningKey(parsed.subscriberId, parsed.uniqueKeyId);
-    if (!pub) return false;
-    return verifyAuthorization({
+    if (!pub) {
+      console.warn("[beckn] inbound verify failed: registry lookup miss for", parsed.subscriberId);
+      return false;
+    }
+    const ok = await verifyAuthorization({
       header: req.headers["authorization"],
       rawBody: req.rawBody ?? JSON.stringify(req.body),
       signingPublicKeyB64: pub,
     });
-  } catch {
+    if (!ok) console.warn("[beckn] inbound verify failed: bad signature for", parsed.subscriberId);
+    return ok;
+  } catch (err) {
+    console.warn("[beckn] inbound verify error:", err.message);
     return false;
   }
 }

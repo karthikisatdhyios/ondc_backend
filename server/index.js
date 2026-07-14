@@ -96,10 +96,15 @@ app.post("/beckn/debug/search", async (req, res) => {
   try {
     const q = typeof req.body?.q === "string" ? req.body.q : "rice";
     const result = await becknSearch({ searchText: q });
+    const bppIds = result.responses
+      .map((r) => r?.context?.bpp_id)
+      .filter(Boolean);
     res.json({
       transactionId: result.transactionId,
       messageId: result.messageId,
       responseCount: result.responses.length,
+      bppIds,
+      hasPramaanMock: bppIds.some((id) => id?.includes("pramaan.ondc.org")),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

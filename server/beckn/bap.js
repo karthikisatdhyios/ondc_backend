@@ -40,7 +40,7 @@ function targetForAction(action, bppUri) {
 }
 
 // ---- Discovery: broadcast search, then gather on_search callbacks ----
-export async function search({ searchText, category, city } = {}) {
+export async function search({ searchText, category, city, bppId, bppUri } = {}) {
   const transactionId = newTransactionId();
   const messageId = newMessageId();
   register(messageId);
@@ -57,11 +57,23 @@ export async function search({ searchText, category, city } = {}) {
   }
 
   const envelope = {
-    context: buildContext("search", { transactionId, messageId, city }),
+    context: buildContext("search", {
+      transactionId,
+      messageId,
+      city,
+      bppId,
+      bppUri,
+    }),
     message: { intent },
   };
 
-  await post(targetForSearch(), envelope);
+  // Directed provider search goes point-to-point; broadcast uses the gateway.
+  const url =
+    bppId && bppUri
+      ? `${bppUri.replace(/\/$/, "")}/search`
+      : targetForSearch();
+
+  await post(url, envelope);
 
   const responses = await collect(messageId, {
     timeoutMs: beckn.enabled ? beckn.searchTimeoutMs : 1200,

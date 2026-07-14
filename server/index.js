@@ -95,7 +95,8 @@ app.post("/beckn/debug/search", async (req, res) => {
   }
   try {
     const q = typeof req.body?.q === "string" ? req.body.q : "rice";
-    const result = await becknSearch({ searchText: q });
+    const city = typeof req.body?.city === "string" ? req.body.city : undefined;
+    const result = await becknSearch({ searchText: q, city });
     const bppIds = result.responses
       .map((r) => r?.context?.bpp_id)
       .filter(Boolean);
@@ -109,6 +110,35 @@ app.post("/beckn/debug/search", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Try common city codes until Praaan's mock seller responds (only active during
+// an armed Praaan test run — click Start on Flow 1A first, then call this).
+app.post("/beckn/debug/pramaan-search", async (req, res) => {
+  if (!beckn.enabled) {
+    return res.status(503).json({ error: "BECKN_ENABLED is false" });
+  }
+  const q = typeof req.body?.q === "string" ? req.body.q : "rice";
+  const cities = ["std:080", "std:011", "std:022", "std:040", "std:0124"];
+  const attempts = [];
+  for (const city of cities) {
+    try {
+      const result = await becknSearch({ searchText: q, city });
+      const bppIds = result.responses.map((r) => r?.context?.bpp_id).filter(Boolean);
+      const hasPramaanMock = bppIds.some((id) => id?.includes("pramaan.ondc.org"));
+      attempts.push({ city, transactionId: result.transactionId, responseCount: result.responses.length, bppIds, hasPramaanMock });
+      if (hasPramaanMock) {
+        return res.json({ ok: true, city, transactionId: result.transactionId, bppIds, attempts });
+      }
+    } catch (err) {
+      attempts.push({ city, error: err.message });
+    }
+  }
+  res.json({
+    ok: false,
+    message: "Praaan mock seller did not respond. Click Start on Flow 1A first, then retry within 10 seconds.",
+    attempts,
+  });
 });
 
 // Ask GPT to route a message: book the cart, gather recipe ingredients,

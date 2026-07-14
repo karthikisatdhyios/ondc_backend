@@ -112,70 +112,48 @@ app.post("/beckn/debug/search", async (req, res) => {
   }
 });
 
-// Try common city codes until Praaan's mock seller responds (only active during
-// an armed Praaan test run — click Start on Flow 1A first, then call this).
+// Try Praaan mock seller (click Start on Flow 1A first, then call within ~10s).
 app.post("/beckn/debug/pramaan-search", async (req, res) => {
   if (!beckn.enabled) {
     return res.status(503).json({ error: "BECKN_ENABLED is false" });
   }
   const q = typeof req.body?.q === "string" ? req.body.q : "rice";
-  const cities = ["std:080", "std:011", "std:022", "std:040", "std:0124"];
+  const city = typeof req.body?.city === "string" ? req.body.city : "std:011";
+  const waitMs = Number(req.body?.timeoutMs) || 5000;
   const pramaanBppId = "pramaan.ondc.org/beta/preprod/mock/seller";
   const pramaanBppUri = "https://pramaan.ondc.org/beta/preprod/mock/seller";
   const attempts = [];
 
-  // 1) Directed search straight to Praaan mock seller (common for Flow 1A).
-  for (const city of cities) {
+  for (const mode of ["direct", "broadcast"]) {
     try {
       const result = await becknSearch({
         searchText: q,
         city,
-        bppId: pramaanBppId,
-        bppUri: pramaanBppUri,
+        timeoutMs: waitMs,
+        ...(mode === "direct" ? { bppId: pramaanBppId, bppUri: pramaanBppUri } : {}),
       });
       const bppIds = result.responses.map((r) => r?.context?.bpp_id).filter(Boolean);
       const hasPramaanMock = bppIds.some((id) => id?.includes("pramaan.ondc.org"));
       attempts.push({
-        mode: "direct",
+        mode,
         city,
         transactionId: result.transactionId,
         responseCount: result.responses.length,
         bppIds,
         hasPramaanMock,
       });
-      if (hasPramaanMock || result.responses.length > 0) {
-        return res.json({
-          ok: true,
-          mode: "direct",
-          city,
-          transactionId: result.transactionId,
-          responseCount: result.responses.length,
-          bppIds,
-          attempts,
-        });
+      if (hasPramaanMock) {
+        return res.json({ ok: true, ...attempts.at(-1), attempts });
       }
     } catch (err) {
-      attempts.push({ mode: "direct", city, error: err.message });
+      attempts.push({ mode, city, error: err.message });
     }
   }
 
-  // 2) Gateway broadcast fallback across cities.
-  for (const city of cities) {
-    try {
-      const result = await becknSearch({ searchText: q, city });
-      const bppIds = result.responses.map((r) => r?.context?.bpp_id).filter(Boolean);
-      const hasPramaanMock = bppIds.some((id) => id?.includes("pramaan.ondc.org"));
-      attempts.push({ mode: "broadcast", city, transactionId: result.transactionId, responseCount: result.responses.length, bppIds, hasPramaanMock });
-      if (hasPramaanMock) {
-        return res.json({ ok: true, city, transactionId: result.transactionId, bppIds, attempts });
-      }
-    } catch (err) {
-      attempts.push({ city, error: err.message });
-    }
-  }
   res.json({
     ok: false,
-    message: "Praaan mock seller did not respond. Click Start on Flow 1A first, then retry within 10 seconds.",
+    message:
+      "Praaan mock seller did not respond. Click Start on Flow 1A, then retry within 10 seconds. If still failing, raise Request Support on Praaan.",
     attempts,
   });
 });

@@ -14,7 +14,12 @@ async function post(url, envelope) {
     headers.Authorization = await createAuthorizationHeader(bodyString);
   }
 
-  const res = await fetch(url, { method: "POST", headers, body: bodyString });
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: bodyString,
+    signal: AbortSignal.timeout(12_000),
+  });
   let json = null;
   try {
     json = await res.json();
@@ -40,7 +45,7 @@ function targetForAction(action, bppUri) {
 }
 
 // ---- Discovery: broadcast search, then gather on_search callbacks ----
-export async function search({ searchText, category, city, bppId, bppUri } = {}) {
+export async function search({ searchText, category, city, bppId, bppUri, timeoutMs } = {}) {
   const transactionId = newTransactionId();
   const messageId = newMessageId();
   register(messageId);
@@ -76,7 +81,7 @@ export async function search({ searchText, category, city, bppId, bppUri } = {})
   await post(url, envelope);
 
   const responses = await collect(messageId, {
-    timeoutMs: beckn.enabled ? beckn.searchTimeoutMs : 1200,
+    timeoutMs: timeoutMs ?? (beckn.enabled ? beckn.searchTimeoutMs : 1200),
     min: 1,
   });
   return { transactionId, messageId, responses };

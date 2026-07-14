@@ -50,6 +50,9 @@ app.use(
 // mock seller that lets the whole search -> confirm loop run without onboarding.
 app.use("/beckn/bap", becknBapRouter());
 app.use("/", ondcOnboardingRouter());
+// ONDC registers callback_url=/beckn/bap, so the registry calls
+// https://<subscriber_id>/beckn/bap/on_subscribe — mirror onboarding routes there too.
+app.use("/beckn/bap", ondcOnboardingRouter());
 if (!beckn.enabled) {
   app.use("/mock-bpp", mockBppRouter());
 }

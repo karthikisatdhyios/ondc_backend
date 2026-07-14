@@ -120,13 +120,52 @@ app.post("/beckn/debug/pramaan-search", async (req, res) => {
   }
   const q = typeof req.body?.q === "string" ? req.body.q : "rice";
   const cities = ["std:080", "std:011", "std:022", "std:040", "std:0124"];
+  const pramaanBppId = "pramaan.ondc.org/beta/preprod/mock/seller";
+  const pramaanBppUri = "https://pramaan.ondc.org/beta/preprod/mock/seller";
   const attempts = [];
+
+  // 1) Directed search straight to Praaan mock seller (common for Flow 1A).
+  for (const city of cities) {
+    try {
+      const result = await becknSearch({
+        searchText: q,
+        city,
+        bppId: pramaanBppId,
+        bppUri: pramaanBppUri,
+      });
+      const bppIds = result.responses.map((r) => r?.context?.bpp_id).filter(Boolean);
+      const hasPramaanMock = bppIds.some((id) => id?.includes("pramaan.ondc.org"));
+      attempts.push({
+        mode: "direct",
+        city,
+        transactionId: result.transactionId,
+        responseCount: result.responses.length,
+        bppIds,
+        hasPramaanMock,
+      });
+      if (hasPramaanMock || result.responses.length > 0) {
+        return res.json({
+          ok: true,
+          mode: "direct",
+          city,
+          transactionId: result.transactionId,
+          responseCount: result.responses.length,
+          bppIds,
+          attempts,
+        });
+      }
+    } catch (err) {
+      attempts.push({ mode: "direct", city, error: err.message });
+    }
+  }
+
+  // 2) Gateway broadcast fallback across cities.
   for (const city of cities) {
     try {
       const result = await becknSearch({ searchText: q, city });
       const bppIds = result.responses.map((r) => r?.context?.bpp_id).filter(Boolean);
       const hasPramaanMock = bppIds.some((id) => id?.includes("pramaan.ondc.org"));
-      attempts.push({ city, transactionId: result.transactionId, responseCount: result.responses.length, bppIds, hasPramaanMock });
+      attempts.push({ mode: "broadcast", city, transactionId: result.transactionId, responseCount: result.responses.length, bppIds, hasPramaanMock });
       if (hasPramaanMock) {
         return res.json({ ok: true, city, transactionId: result.transactionId, bppIds, attempts });
       }

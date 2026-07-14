@@ -43,9 +43,14 @@ function x25519PublicFromB64(b64) {
   return crypto.createPublicKey({ key: buf, format: "der", type: "spki" });
 }
 
-function x25519PrivateFromRaw(rawB64) {
-  const der = Buffer.concat([X25519_PKCS8_PREFIX, Buffer.from(rawB64, "base64")]);
-  return crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+function x25519PrivateFromB64(b64) {
+  const buf = Buffer.from(b64, "base64");
+  if (buf.length === 32) {
+    const der = Buffer.concat([X25519_PKCS8_PREFIX, buf]);
+    return crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+  }
+  // ONDC portal keys are already PKCS8 DER (MC4CAQAwBQYDK2Vu...).
+  return crypto.createPrivateKey({ key: buf, format: "der", type: "pkcs8" });
 }
 
 // Convert our raw 32-byte X25519 public key to the ASN.1 DER/SPKI base64 form
@@ -68,7 +73,7 @@ export async function decryptChallenge(challengeB64) {
   }
   const keys = await getKeys();
 
-  const privateKey = x25519PrivateFromRaw(keys.encryption.privateKey);
+  const privateKey = x25519PrivateFromB64(keys.encryption.privateKey);
   const publicKey = x25519PublicFromB64(ondcPublicKey);
   const sharedSecret = crypto.diffieHellman({ privateKey, publicKey });
 

@@ -4,11 +4,11 @@ import { beckn } from "./config.js";
 // Build a Beckn `context` block for an outgoing action.
 // bppId/bppUri are set for point-to-point actions (select/init/confirm/status);
 // they are omitted for a broadcast search that goes to the gateway.
-export function buildContext(action, { transactionId, messageId, bppId, bppUri, ttl } = {}) {
+export function buildContext(action, { transactionId, messageId, bppId, bppUri, ttl, city } = {}) {
   const ctx = {
     domain: beckn.domain,
     country: beckn.country,
-    city: beckn.city,
+    city: city || beckn.city,
     action,
     core_version: beckn.coreVersion,
     bap_id: beckn.bapId,

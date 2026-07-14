@@ -40,7 +40,7 @@ function targetForAction(action, bppUri) {
 }
 
 // ---- Discovery: broadcast search, then gather on_search callbacks ----
-export async function search({ searchText, category } = {}) {
+export async function search({ searchText, category, city } = {}) {
   const transactionId = newTransactionId();
   const messageId = newMessageId();
   register(messageId);
@@ -57,7 +57,7 @@ export async function search({ searchText, category } = {}) {
   }
 
   const envelope = {
-    context: buildContext("search", { transactionId, messageId }),
+    context: buildContext("search", { transactionId, messageId, city }),
     message: { intent },
   };
 

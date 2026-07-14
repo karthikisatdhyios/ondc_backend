@@ -14,6 +14,7 @@ import {
 } from "./payments.js";
 import { beckn } from "./beckn/config.js";
 import { discover } from "./beckn/discovery.js";
+import { search as becknSearch } from "./beckn/bap.js";
 import { becknBapRouter, ondcOnboardingRouter } from "./beckn/routes.js";
 import { mockBppRouter } from "./beckn/mock-bpp/index.js";
 import { getKeys } from "./beckn/keys.js";
@@ -84,6 +85,25 @@ app.get("/beckn/health", async (_req, res) => {
     ondcEncryptionKeySet: Boolean(process.env.ONDC_ENCRYPTION_PUBLIC_KEY),
     openaiConfigured,
   });
+});
+
+// Trigger search inside the running server process so on_search callbacks land
+// in the same in-memory correlation store (node -e uses a separate process).
+app.post("/beckn/debug/search", async (req, res) => {
+  if (!beckn.enabled) {
+    return res.status(503).json({ error: "BECKN_ENABLED is false" });
+  }
+  try {
+    const q = typeof req.body?.q === "string" ? req.body.q : "rice";
+    const result = await becknSearch({ searchText: q });
+    res.json({
+      transactionId: result.transactionId,
+      messageId: result.messageId,
+      responseCount: result.responses.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Ask GPT to route a message: book the cart, gather recipe ingredients,

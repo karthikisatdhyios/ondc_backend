@@ -35,6 +35,9 @@ export const beckn = {
   // How long to wait for asynchronous on_search / on_select callbacks.
   searchTimeoutMs: Number(process.env.BECKN_SEARCH_TIMEOUT_MS || 4000),
   actionTimeoutMs: Number(process.env.BECKN_ACTION_TIMEOUT_MS || 6000),
+  // Pre-prod only: skip inbound signature verify when registry lookup is blocked.
+  skipInboundVerify:
+    String(process.env.BECKN_SKIP_INBOUND_VERIFY || "false").toLowerCase() === "true",
 };
 
 export const port_ = port;

@@ -22,8 +22,14 @@ export const beckn = {
   domain: process.env.ONDC_DOMAIN || "ONDC:RET10", // retail - grocery
   country: process.env.ONDC_COUNTRY || "IND",
   city: process.env.ONDC_CITY || "std:080", // Bangalore
-  coreVersion: process.env.ONDC_CORE_VERSION || "1.2.0",
+  coreVersion: process.env.ONDC_CORE_VERSION || "1.2.5",
   env: process.env.ONDC_ENV || "preprod",
+
+  // Retail search delivery location (overrides city map when set).
+  searchGps: process.env.ONDC_SEARCH_GPS || "",
+  searchPincode: process.env.ONDC_SEARCH_PINCODE || "",
+  finderFeeType: process.env.ONDC_FINDER_FEE_TYPE || "percent",
+  finderFeeAmount: process.env.ONDC_FINDER_FEE_AMOUNT || "3",
 
   // Where sellers/gateway POST our callbacks. Must be publicly reachable in pre-prod.
   callbackBase: `${(process.env.BAP_URI || `http://localhost:${port}`).replace(/\/$/, "")}/beckn/bap`,

@@ -2,6 +2,7 @@ import { beckn } from "./config.js";
 import { buildContext, newTransactionId, newMessageId } from "./context.js";
 import { createAuthorizationHeader } from "./auth.js";
 import { register, collect } from "./store.js";
+import { buildSearchIntent } from "./search-intent.js";
 
 // Sends a signed Beckn message. In live mode search goes to the ONDC gateway and
 // point-to-point actions go to the BPP's bpp_uri; in dev mode everything goes to
@@ -20,14 +21,18 @@ async function post(url, envelope) {
     body: bodyString,
     signal: AbortSignal.timeout(12_000),
   });
+  const raw = await res.text();
   let json = null;
   try {
-    json = await res.json();
+    json = raw ? JSON.parse(raw) : null;
   } catch {
-    /* some ACKs have empty bodies */
+    /* some ACKs have empty or non-JSON bodies */
   }
   if (!res.ok) {
-    throw new Error(`Beckn ${envelope.context.action} -> ${url} failed: ${res.status}`);
+    const detail = json ? JSON.stringify(json) : raw.slice(0, 500);
+    throw new Error(
+      `Beckn ${envelope.context.action} -> ${url} failed: ${res.status}${detail ? ` ${detail}` : ""}`
+    );
   }
   return json;
 }
@@ -50,16 +55,7 @@ export async function search({ searchText, category, city, bppId, bppUri, timeou
   const messageId = newMessageId();
   register(messageId);
 
-  const intent = {};
-  if (searchText) {
-    intent.item = { descriptor: { name: searchText } };
-  }
-  if (category) {
-    intent.category = { id: category };
-  }
-  if (!intent.item && !intent.category) {
-    intent.item = { descriptor: { name: "" } };
-  }
+  const intent = buildSearchIntent({ searchText, category, city });
 
   const envelope = {
     context: buildContext("search", {

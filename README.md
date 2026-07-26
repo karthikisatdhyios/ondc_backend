@@ -15,8 +15,8 @@ This monorepo contains the **Express backend** (ONDC + API) and a **React chat U
 **Requirements:** Node.js 20+, npm
 
 ```bash
-git clone https://github.com/Tech-Dhiyos/dhiyos-BE.git
-cd dhiyos-BE
+git clone https://github.com/Tech-Dhiyos/dhiyos-ondc.git
+cd dhiyos-ondc
 cp .env.example .env
 npm install
 npm run seed
@@ -174,6 +174,7 @@ curl -s https://bap.dhiyos.com/beckn/health
 |---|---|
 | [Tech-Dhiyos/dhiyos-FE](https://github.com/Tech-Dhiyos/dhiyos-FE) | Frontend (separate; this repo also has a Vite UI) |
 | [Tech-Dhiyos/dhiyos-ML](https://github.com/Tech-Dhiyos/dhiyos-ML) | ML services |
+| [Tech-Dhiyos/dhiyos-BE](https://github.com/Tech-Dhiyos/dhiyos-BE) | Legacy placeholder — use **dhiyos-ondc** instead |
 
 ---
 

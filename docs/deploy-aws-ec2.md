@@ -40,7 +40,7 @@ chmod 400 your-key.pem
 ssh -i your-key.pem ubuntu@EIP
 
 sudo mkdir -p /opt/dhiyos && sudo chown -R ubuntu /opt/dhiyos
-git clone https://github.com/Tech-Dhiyos/dhiyos-BE.git /opt/dhiyos/ondc_backend
+git clone https://github.com/Tech-Dhiyos/dhiyos-ondc.git /opt/dhiyos/ondc_backend
 cd /opt/dhiyos/ondc_backend
 ```
 
